@@ -1,0 +1,257 @@
+
+ *** Как добавить новый модуль в проект Terminal Clock Display ***
+ Инструкция делится на несколько частей.
+ - Часть первая. Создание модуля.
+ - Часть вторая. Обновление complex_modules.c
+ - Часть третья. Для анимированных модулей отредактируйте common.c
+ - Часть четвертая. Проверьте файл common.c нет ли конфликтов.
+ - Часть пятая. Обновите Makefile
+ - Копирование модулей
+ - Удаление модулей
+
+ === ** Создание модуля ** ========================================================
+
+ 1. Скопируем новый C-файл с именем module_00.c:
+ cp module_01.c module_00.c
+ По причине того, что там есть готовые участки кода (это как заготовка.)
+
+ 2. Открывам файл: nano module_00.c
+
+ 3. Удалим код старой программы.
+ - Вспомогательные функции.
+ - То что в int module_01_run(void) {}
+ - То что в #ifndef COMPLEX_BUILD
+            int main(void) {}
+	    #endif
+
+ 4. Проверяем и добавляем необходимые заголовочные файлы.
+ #include "common.h" (обязательно)
+ Что значит добавить заголовки в module_08.c
+ Если вашему модулю нужны только те заголовки, что уже есть в common.h
+ то вам вообще ничего дополнительно добавлять не нужно!
+ Если нужны другие заголовки (например, <time.h> для работы со временем
+ или <math.h> для математики) → добавляйте их только в module_08.c.
+ То есть надо просмотреть код программы и код common.h
+
+ 5. Меняем int module_01_run(void) { на int module_00_run(void) {
+
+ 3. Вставьте код модуля (текст новой программы).
+
+ 4. После заголовочнфх файлов должны стоять все вспомогательные функции.
+
+ 5. int module_00_run(void) {
+ - Здесь то, что было в int main()
+    return 0;
+ }
+ Таким образом int module_08_run(void) всегда заменяет main()
+
+ 6. Повторите (скопируйте) main(void) для индивидуального компилирования.
+ #ifndef COMPLEX_BUILD
+ int main(void) {
+ Вставить код мэйн из оригинальной программы.
+    return 0;
+ }
+ #endif
+
+ === ** Обновление complex_modules.c ** ================================
+
+ 1. Откройте complex_modules.c nano complex_modules.c
+
+ 2. Добавьте строку: DECLARE_MODULE_RUN(00);
+ 00 должно соответствовать номеру модуля module_00.c
+
+ 3. Добавьте блок кода для анимированного модуля:
+static int is_animated_module(int module_num) {
+    // Модуль 00 (индекс 0) - анимированный
+    if (module_num == 0) {
+        return 1;
+    }
+    // Модуль 01 (индекс 1) - анимированный
+    if (module_num == 1) {
+        return 1;
+    }
+    // Модуль 02 (индекс 2) - анимированный
+    if (module_num == 2) {
+        return 1;
+    }
+    // Модуль 03 (индекс 3) - анимированный
+    if (module_num == 3) {
+        return 1;
+    }
+    // Модуль 08 (индекс 8) - анимированный
+    if (module_num == 8) {
+        return 1;
+    }
+    // Модуль 09 (индекс 10) - анимированный
+    if (module_num == 9) {
+        return 1;
+    }
+    // Все остальные модули - НЕ анимированные
+    return 0;
+}
+
+ 3. Увеличте размер массива на один: int (*module_runs[9])(void) = {
+ Число всегда должно быть равно общему числу модулей.
+
+ 4. Добавьте модуль в массив указателей на функции
+ int (*module_runs[9])(void) = {
+    module_00_run, ..., module_07_run, module_08_run
+ };
+ В нашем случае это module_00_run
+
+ 5. Обновите индексы проверки, соответствующие клавишам:
+ else if (ch >= '0' && ch <= '9') {
+ else if (ch >= '0' && ch <= '9') {
+ В двух местах. Все остальные модули - НЕ анимированные
+    return 0;
+}
+
+ 6. Надо помнить, что номер модуля и индекс - это разные вещи!
+
+ === Обновление Makefile ===
+ Строго используйте табуляцию!
+ # 1. В строке SRCS добавь module_08.c:
+SRCS = common.c complex_modules.c \
+       module_00.c module_01.c module_02.c module_03.c \
+       module_04.c module_05.c module_06.c module_07.c module_08.c
+
+# 2. Добавь после module_07.o:
+module_07.o: module_08.c common.h
+        $(CC) $(CFLAGS) -c module_08.c -o module_08.o
+
+# 3. В standalone добавь module_08_standalone:
+standalone: module_00_standalone module_01_standalone module_02_standalone \
+            module_03_standalone module_04_standalone module_05_standalone \
+            module_06_standalone module_07_standalone module_08_standalone
+
+# 4. Добавь правило module_08_standalone:
+module_08_standalone: module_08.c common.c common.h
+	$(CC) -Wall -Wextra -O2 -std=c99 -o module_08 module_08.c common.c
+
+# 5. В clean добавь module_08:
+clean:
+	rm -f $(TARGET) $(OBJS) \
+	      module_00 module_01 module_02 module_03 \
+	      module_04 module_05 module_06 module_07 module_08
+
+# 6. Добавь цель run8:
+run8: $(TARGET)
+	./$(TARGET) 8
+
+# 7. В .PHONY добавь run8:
+.PHONY: all clean run run0 run1 run2 run3 run4 run5 run6 run7 run8 help standalone
+
+ === Проверьте файл common.c нет ли конфликтов ===
+ но тут все индивидуально...
+
+ *** ПЕРЕИМЕНОВАНИЕ МОДУЛЯ *******************************************************
+ 1. Переименовать модуль: mv module_08.c module_09.c
+ 
+ 2. Открываем файл: nano module_09.c
+
+ 3. Переименовать int module_00_run(void) { на int module_09_run(void) {
+ 
+ 4. В функции:
+#ifndef COMPLEX_BUILD
+int main(void) {
+    screen_state(0);
+    term_mode(0);
+    run_animated_module(module_00_run);
+    term_mode(1);
+    screen_state(1);
+    return 0;
+}
+#endif
+
+ Заменить run_animated_module(module_00_run); на run_animated_module(module_09_run);
+
+ 5. Далее: nano complex_modules.c
+
+ 6. Удалить DECLARE_MODULE_RUN(00); и добавить DECLARE_MODULE_RUN(09);
+
+ 7. Обновить массив module_runs — нужно удалить модуль module_00_run и добавить module_09_run в список.
+
+ 8. Не менять индекс: int (*module_runs[9])(void) = {
+
+ 9. Для анимированных модулей изменить блок:
+static int is_animated_module(int module_num) {
+    return (module_num >= 1 && module_num <= 3) || (module_num == 8) || (module_num == 9)
+}
+
+10. Обновить условие:
+ else if (ch >= '0' && ch <= '8') {
+                              current_module = ch - '8';
+на
+else if (ch >= '1' && ch <= '9') {
+                            current_module = ch - '1';
+11. Обновить Makefile
+
+ === ** Для анимированных модулей отредактируйте common.c ** ===
+ Туда залезть надо...
+
+ === ** Копирование модулей ** ===
+ 1. cat cat module_00.c > module_04.c
+
+ 2. Заменить #include "pseudographic_help.h" на #include "pseudographic_color.h"
+
+ 3. В функцию переименовать module_00_run() в module_04_run()
+
+ 4. Переименовать функции для диспетчера:
+module_0_scroll_up() → module_4_scroll_up()
+module_0_scroll_down() → module_4_scroll_down()
+module_0_get_current_line() → module_4_get_current_line()
+module_0_set_current_line() → module_4_set_current_line()
+
+ === *** Удаление модулей *** ====================================================
+
+ 1. rm module_05.c
+
+ * Файл: complex_modules.c *
+
+ 2. Удалить декларацию модуля 5: DECLARE_MODULE_RUN(05);      // <-- ЭТУ СТРОКУ УДАЛИТЬ
+
+ 3. Изменить размер массива module_runs:
+int (*module_runs[10])(void) = {
+     module_00_run, module_01_run, module_02_run, module_03_run, module_04_run, module_05_run,
+     module_06_run, module_07_run, module_08_run, module_09_run
+};
+
+ Изменить на:
+int (*module_runs[9])(void) = {
+     module_00_run, module_01_run, module_02_run, module_03_run, module_04_run,
+     module_06_run, module_07_run, module_08_run, module_09_run
+};
+
+ 4. Убрать module_05_run, и изменить [10] на [9]
+
+ 5. Вслучае если необходимо исправить обработку цифры '5' в анимированных модулях:
+else if (ch >= '0' && ch <= '9') {
+    current_module = ch - '0';
+    screen_state(0);
+}
+
+Изменить на:
+else if (ch >= '0' && ch <= '9') {
+    int new_module = ch - '0';
+    if (new_module == 5) continue;  // Пропускаем модуль 5
+    if (new_module > 5) {
+        new_module--;  // Смещаем индексы для модулей 6-9
+    }
+    current_module = new_module;
+    screen_state(0);
+}
+
+Исправить обработку цифры '5' в неанимированных модулях:
+
+Найти второй блок (в else ветке):
+else if (ch >= '0' && ch <= '9') {
+    current_module = ch - '0';
+    screen_state(0);
+}
+
+ 6. Проверить файл common.h
+ Проверить файл common.c
+ Поверить на наличие теперь не используемых функций
+
+ 7. Отредактировать Makefile
+k

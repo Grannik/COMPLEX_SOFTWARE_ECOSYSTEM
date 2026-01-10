@@ -1,0 +1,18 @@
+
+ 1. Взять заготовку.
+
+ 2. Переименовать.
+
+ 3. Вставить необходимое содержимое в строки с кавычками.
+
+ 4. В Makefile нужно внести следующие изменения:
+
+ 4.1 Добавить pseudographic_help.h в список заголовочных файлов:
+HEADERS = common.h pseudographic_font_3.h pseudographic_font_5.h pseudographic_font_7.h pseudographic_help.h
+
+ 4.2 Обновить зависимость для module_00.o (строка 34):
+module_00.o: module_00.c common.h pseudographic_help.h
+	$(CC) $(CFLAGS) -c module_00.c -o module_00.o
+ 4.3 Обновить standalone сборку для module_00 (строка 64-65):
+module_00_standalone: module_00.c common.c common.h pseudographic_help.h
+	$(CC) -Wall -Wextra -O2 -std=c99 -DSTANDALONE_BUILD -o module_00 module_00.c common.c
