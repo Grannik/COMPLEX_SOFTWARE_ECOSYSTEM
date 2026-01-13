@@ -47,5 +47,15 @@
 - Компилятор GCC.
 - Терминал с поддержкой ANSI escape-кодов и UTF-8 (для корректного отображения символов).
 
- neocities: https://grannik.neocities.org/grCterm
- codeberg:  https://codeberg.org/Grannik/COMPLEX_SOFTWARE_ECOSYSTEM
+## Работа
+❌ НЕТ фоновой работы модулей
+❌ НЕТ многопоточности или параллельного выполнения
+✅ Каждый модуль работает последовательно, полностью завершаясь перед запуском следующего
+✅ Переключение модуля = остановка предыдущего + запуск нового с чистого экрана
+
+## Публикация
+ neocities:   https://grannik.neocities.org/grCterm
+ codeberg:    https://codeberg.org/Grannik/COMPLEX_SOFTWARE_ECOSYSTEM
+ github:      https://github.com/Grannik/COMPLEX_SOFTWARE_ECOSYSTEM
+ gitlab:      https://gitlab.com/grannik/complex_software_ecosystem
+ sourceforge: https://sourceforge.net/projects/complex-software-ecosystem/

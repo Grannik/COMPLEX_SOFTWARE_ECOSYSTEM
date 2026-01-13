@@ -1,5 +1,5 @@
 #include "common.h"
-#include "pseudographic_color.h"
+#include "content_color_16.h"
 
 #include <time.h>
 #include <string.h>
@@ -46,6 +46,8 @@ int module_05_run(void) {
     content_block_size = block_size;
     content_current_line = current_line;
     draw_exact_frame();
+    print_subtitle_left("____[][][][][][\033[0m5\033[32m][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", 2, 2);
+    print_subtitle_left("Basic ANSI Text Attributes and 16-Color Palette List", 3, 6);
     display_from_line(current_line);
     return 0;
 }
@@ -155,4 +157,5 @@ int main(void) {
 }
 
 #endif
-// компиляция: gcc -Wall -Wextra -O2 -std=c99 -DSTANDALONE_BUILD -o module05 module_05.c common.c
+
+// Compilation: gcc -Wall -Wextra -O2 -std=c99 -DSTANDALONE_BUILD -o module05 module_05.c common.c

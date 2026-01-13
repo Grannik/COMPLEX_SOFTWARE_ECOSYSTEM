@@ -32,7 +32,10 @@ int module_01_run(void) {
     const char* month_name = get_month_name(timeinfo->tm_mon + 1);
     const char* weekday_name = get_weekday_name(timeinfo->tm_wday);
     printf("\033[2J\033[H");
-    printf("\033[2;1H");
+    draw_exact_frame();
+    print_subtitle_left("____[][\033[0m1\033[32m][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", 2, 2);
+    print_subtitle_left("Clock (style 1)", 3, 6);
+    printf("\033[5;20H");
     printf(" %d\033[90m/\033[0m%s\033[90m/\033[0m%s \033[90;1m|\033[0m %d\033[90m/\033[0m%s \033[90;1m|\033[0m %02d\033[90m:\033[0m%02d\033[90m:\033[0m%02d",
            timeinfo->tm_year + 1900,
            season,
@@ -57,3 +60,5 @@ int main(void) {
     return 0;
 }
 #endif
+
+// Compilation: gcc -Wall -Wextra -O2 -std=c99 -DSTANDALONE_BUILD -o module01 module_01.c common.c

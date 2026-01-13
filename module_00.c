@@ -1,5 +1,5 @@
 #include "common.h"
-#include "pseudographic_help.h"
+#include "content_help.h"
 
 #include <time.h>
 #include <string.h>
@@ -48,6 +48,8 @@ int module_00_run(void) {
     content_block_size = block_size;
     content_current_line = current_line;
     draw_exact_frame();
+    print_subtitle_left("____[\033[0m0\033[32m][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", 2, 2);
+    print_subtitle_left("Reference information. Module - usage", 3, 6);
     display_from_line(current_line);
     return 0;
 }
@@ -117,8 +119,8 @@ int handle_all_input(void) {
 int main(void) {
     screen_state(0);
     term_mode(0);
-    current_content = content;           // массив из pseudographic_help.h
-    current_content_size = TOTAL_CONTENT; // константа из pseudographic_help.h
+    current_content = content;
+    current_content_size = TOTAL_CONTENT;
     int term_height = get_terminal_height();
     int available_lines = term_height - 4;
     if (available_lines < 1) available_lines = 1;

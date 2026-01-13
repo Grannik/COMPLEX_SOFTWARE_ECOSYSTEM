@@ -136,14 +136,14 @@ void display_from_line(int start_line) {
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     int width = (w.ws_col < 84) ? w.ws_col : 84;
     for (int row = 0; row < content_block_size; row++) {
-        printf("\033[%d;2H", 3 + row);
+        printf("\033[%d;2H", 4 + row);
         int line_num = start_line + row;
         if (current_content && line_num < current_content_size) {
             printf("\033[K%s", current_content[line_num]);
         } else {
             printf("\033[K");
         }
-        printf("\033[38;5;10m\033[%d;%dH║\033[0m", 3 + row, width);
+        printf("\033[38;5;10m\033[%d;%dH║\033[0m", 4 + row, width);
     }
     fflush(stdout);
 }
@@ -154,4 +154,36 @@ void common_scroll(int direction, int *current_line, int block_size, int total) 
     if (new_line < 0) new_line = 0;
     if (new_line > total - block_size) new_line = total - block_size;
     *current_line = new_line;
+}
+
+void print_subtitle_left(const char *title, int row, int left_margin) {
+    printf("\033[%d;%dH\033[38;5;10m%s\033[0m", row, left_margin, title);
+    fflush(stdout);
+}
+
+void print_pseudographic_time(int hours, int mins, int secs,
+                              GetCharFunc get_char_func,
+                              int font_rows, int start_row, int start_col) {
+    if (hours < 0 || hours > 23 || mins < 0 || mins > 59 || secs < 0 || secs > 59) {
+        printf("\033[H\033[1mInvalid time: %02d:%02d:%02d\033[0m\n", hours, mins, secs);
+        fflush(stdout);
+        return;
+    }
+    char time_str[9];
+    snprintf(time_str, 9, "%02d:%02d:%02d", hours, mins, secs);
+    const char** chars[8];
+    for (int i = 0; i < 8; i++) {
+        chars[i] = get_char_func(time_str[i]);
+    }
+    for (int row = 0; row < font_rows; row++) {
+        printf("\033[%d;%dH", start_row + row, start_col);
+        for (int i = 0; i < 8; i++) {
+            if (i == 2 || i == 5) {
+                printf("\033[1m\033[90m%s\033[0m", chars[i][row]);
+            } else {
+                printf("\033[1m\033[37m%s\033[0m", chars[i][row]);
+            }
+        }
+    }
+    fflush(stdout);
 }
