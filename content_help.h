@@ -1,9 +1,9 @@
 #ifndef PSEUDOGRAPHIC_HELP_H
 #define PSEUDOGRAPHIC_HELP_H
+#define HELP_TOTAL_CONTENT 36
+#include "content_var.h"
 
-#define TOTAL_CONTENT 36
-
-static const char *content[TOTAL_CONTENT] = {
+static const char *help_content[HELP_TOTAL_CONTENT] = {
     " module 0  | Reference information. Module - usage.",
     " module 1  | Clock (style 1)",
     " module 2  | Clock (3-line pseudographic font)",

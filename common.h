@@ -6,6 +6,11 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/select.h>
+//#include <libmsgtermcolor.h>
+#include "libtermcolor/libtermcolor.h"
+
+#define MIN_WIDTH 84
+#define MIN_HEIGHT 21
 
 extern const char **current_content;
 extern int current_content_size;
@@ -23,23 +28,23 @@ int get_terminal_height(void);
 void common_scroll(int direction, int *current_line, int block_size, int total);
 void print_subtitle_left(const char *title, int row, int left_margin);
 
-void module_0_scroll_up(void);
-void module_0_scroll_down(void);
-int module_0_get_current_line(void);
-void module_0_set_current_line(int line);
-
-void module_5_scroll_up(void);
-void module_5_scroll_down(void);
-int module_5_get_current_line(void);
-void module_5_set_current_line(int line);
-
-void module_6_scroll_up(void);
-void module_6_scroll_down(void);
-int module_6_get_current_line(void);
-void module_6_set_current_line(int line);
+void universal_scroll(int module_id, int direction);
+int universal_get_current_line(int module_id);
+void universal_set_current_line(int module_id, int line);
+int universal_get_block_size(int module_id);
+void universal_set_block_size(int module_id, int size);
+int universal_get_total(int module_id);
 
 typedef const char** (*GetCharFunc)(char c);
 void print_pseudographic_time(int hours, int mins, int secs,
                               GetCharFunc get_char_func,
                               int font_rows, int start_row, int start_col);
+
+typedef enum {
+    DISPLAY_LINES,
+    DISPLAY_FUNCS
+} display_mode_t;
+
+void display_from_line_mode(int start_line, display_mode_t mode, void *content_ptr, int content_size);
+
 #endif

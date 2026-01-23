@@ -1,27 +1,26 @@
 # Compiler and flags
 CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c99 -DCOMPLEX_BUILD
-LDFLAGS =
 
 # Target executable
 TARGET = complex_modules
 
 # Source files
-SRCS = common.c complex_modules.c \
-	module_00.c module_01.c module_02.c module_03.c module_04.c module_05.c module_06.c module_07.c
+SRCS = common.c libtermcolor/libtermcolor.c content_var.c complex_modules.c \
+	module_00.c module_01.c module_02.c module_03.c module_04.c module_05.c module_06.c module_07.c \
 
 # Object files
 OBJS = $(SRCS:.c=.o)
 
 # Header files
-HEADERS = common.h pseudographic_font_3.h pseudographic_font_5.h pseudographic_font_7.h content_help.h content_color_16.h content_color_256.h
+HEADERS = common.h pseudographic_font_3.h pseudographic_font_5.h pseudographic_font_7.h content_help.h content_color_16.h content_color_256.h content_var.h
 
 # Default target
 all: $(TARGET)
 
 # Build main executable
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	$(CC) $(OBJS) $(LDFLAGS) $(LDLIBS) -o $(TARGET)
 
 # Object file dependencies
 common.o: common.c common.h
@@ -51,8 +50,11 @@ module_05.o: module_05.c common.h content_color_16.h
 module_06.o: module_06.c common.h content_color_256.h
 	$(CC) $(CFLAGS) -c module_06.c -o module_06.o
 
-module_07.o: module_07.c common.h
+module_07.o: module_07.c common.h content_var.h
 	$(CC) $(CFLAGS) -c module_07.c -o module_07.o
+
+content_var.o: content_var.c content_var.h
+	$(CC) $(CFLAGS) -c content_var.c -o content_var.o
 
 # Standalone executables (optional)
 standalone: \

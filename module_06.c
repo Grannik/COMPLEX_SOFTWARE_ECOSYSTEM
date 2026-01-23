@@ -7,148 +7,102 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 
-static int current_line = 0;
-static int block_size = 0;
-
-static void scroll_lines(int direction) {
-    common_scroll(direction, &current_line, block_size, TOTAL_CONTENT);
-}
-
-void module_6_scroll_up(void) {
-    scroll_lines(-1);
-}
-
-void module_6_scroll_down(void) {
-    scroll_lines(1);
-}
-
-int module_6_get_current_line(void) {
-    return current_line;
-}
-
- void module_6_set_current_line(int line) {
-    if (line < 0) line = 0;
-    if (line > TOTAL_CONTENT - block_size) line = TOTAL_CONTENT - block_size;
-    current_line = line;
-}
-
 int module_06_run(void) {
+    current_content_size = TOTAL_CONTENT;
+    int term_height = get_terminal_height();
+    int available_lines = term_height - 4;
+    if (available_lines < 1) available_lines = 1;
+    int total = TOTAL_CONTENT;
+    int new_block_size = (available_lines >= total) ? total : available_lines;
+    universal_set_block_size(6, new_block_size);
+    universal_set_current_line(6, universal_get_current_line(6));
+    content_current_line = universal_get_current_line(6);
+    content_block_size = new_block_size;
+    draw_exact_frame();
+    libtermcolor_pos(2, 2, POS, 32,"____[][][][][][][", 37,"6", 32,"][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", NUL);
+    libtermcolor_pos(6, 3, POS, 32,"256-Color ANSI Palette List", NUL);
+    display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
+    return 0;
+}
+
+#ifndef COMPLEX_BUILD
+
+#include <sys/ioctl.h>
+
+void universal_set_block_size(int module_id, int size) {
+    (void)module_id; (void)size;
+}
+
+int universal_get_current_line(int module_id) {
+    (void)module_id;
+    return 0;
+}
+
+void universal_set_current_line(int module_id, int line) {
+    (void)module_id; (void)line;
+}
+
+static int check_terminal_size(void) {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
+        libtermcolor_msg(37, "WARNING:", 35, " ioctl failed for terminal size check", NUL);
+        return 0;
+    }
+    if (w.ws_col < 84 || w.ws_row < 21) {
+        libtermcolor_buf(84, 21, BUF);
+        libtermcolor_msg(1, " ", 31, "FATAL:", 22, " ",
+                       32, "Terminal too small! Minimum: %dx%d", NUL);
+        libtermcolor_buf(w.ws_col, w.ws_row, BUF);
+        libtermcolor_msg(1, " ", 33, "WARNING:", 22, " ",
+                       35, "Current size: %dx%d", NUL);
+        return 0;
+    }
+    return 1;
+}
+
+int main(void) {
+    if (!check_terminal_size()) {
+        return 1;
+    }
+    screen_state(0);
+    term_mode(0);
+    printf("\033[2J\033[H");
+    draw_exact_frame();
+    libtermcolor_pos(6, 2, POS, 32,"256-Color ANSI Palette List", NUL);
     current_content = content;
     current_content_size = TOTAL_CONTENT;
     int term_height = get_terminal_height();
     int available_lines = term_height - 4;
     if (available_lines < 1) available_lines = 1;
     if (available_lines >= TOTAL_CONTENT) {
-        block_size = TOTAL_CONTENT;
+        content_block_size = TOTAL_CONTENT;
     } else {
-        block_size = available_lines;
+        content_block_size = available_lines;
     }
-    content_block_size = block_size;
-    content_current_line = current_line;
-    draw_exact_frame();
-    print_subtitle_left("____[][][][][][][\033[0m6\033[32m][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", 2, 2);
-    print_subtitle_left("256-Color ANSI Palette List", 3, 6);
-    display_from_line(current_line);
-    return 0;
-}
-
-#ifdef STANDALONE_BUILD
-
-int handle_arrow_input_fixed(void) {
-    char ch;
-    ssize_t bytes = read(STDIN_FILENO, &ch, 1);
-    if (bytes != 1) return -4;
-    if (ch != 27) return -4;
-    char seq[2];
-    bytes = read(STDIN_FILENO, seq, 2);
-    if (bytes == 2 && seq[0] == '[') {
-        if (seq[1] == 'A') return -2;
-        if (seq[1] == 'B') return -3;
-    }
-    tcflush(STDIN_FILENO, TCIFLUSH);
-    return -4;
-}
-
-int handle_all_input(void) {
-    char ch;
-    ssize_t bytes_read = read(STDIN_FILENO, &ch, 1);
-    if (bytes_read != 1) return -4;
-    if (ch >= '0' && ch <= '6') {
-        tcflush(STDIN_FILENO, TCIFLUSH);
-        return ch;
-    }
-    else if (ch == 'q' || ch == 'Q') {
-        tcflush(STDIN_FILENO, TCIFLUSH);
-        return -1;
-    }
-    else if (ch == 27) {
-        char seq[2];
-        struct timeval tv = {0, 10000};
-        fd_set fds;
-        FD_ZERO(&fds);
-        FD_SET(STDIN_FILENO, &fds);
-        if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
-            ssize_t seq_bytes = read(STDIN_FILENO, &seq[0], 1);
-            if (seq_bytes == 1 && seq[0] == '[') {
-                FD_ZERO(&fds);
-                FD_SET(STDIN_FILENO, &fds);
-                if (select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0) {
-                    seq_bytes = read(STDIN_FILENO, &seq[1], 1);
-                    if (seq_bytes == 1) {
-                        if (seq[1] == 'A') {
-                            tcflush(STDIN_FILENO, TCIFLUSH);
-                            return -2;
+    content_current_line = 0;
+    display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
+    while (1) {
+        char ch;
+        ssize_t bytes = read(STDIN_FILENO, &ch, 1);
+        if (bytes == 1) {
+            if (ch == 'q' || ch == 'Q') break;
+            if (ch == 27) {
+                char seq[2];
+                bytes = read(STDIN_FILENO, seq, 2);
+                if (bytes == 2 && seq[0] == '[') {
+                    if (seq[1] == 'A') {
+                        if (content_current_line > 0) {
+                            content_current_line--;
+                            display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
                         }
-                        else if (seq[1] == 'B') {
-                            tcflush(STDIN_FILENO, TCIFLUSH);
-                            return -3;
+                    } else if (seq[1] == 'B') {
+                        if (content_current_line < TOTAL_CONTENT - content_block_size) {
+                            content_current_line++;
+                            display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
                         }
                     }
                 }
             }
-        }
-        tcflush(STDIN_FILENO, TCIFLUSH);
-        return -4;
-    }
-    tcflush(STDIN_FILENO, TCIFLUSH);
-    return -4;
-}
-
-int main(void) {
-    screen_state(0);
-    term_mode(0);
-    current_content = content;
-    current_content_size = TOTAL_CONTENT;
-    int term_height = get_terminal_height();
-    int available_lines = term_height - 4;
-    if (available_lines < 1) available_lines = 1;
-    if (available_lines >= TOTAL_CONTENT) {
-        block_size = TOTAL_CONTENT;
-    } else {
-        block_size = available_lines;
-    }
-    content_block_size = block_size;
-    content_current_line = current_line;
-    current_line = 0;
-    draw_exact_frame();
-    display_from_line(current_line);
-    tcflush(STDIN_FILENO, TCIFLUSH);
-    int running = 1;
-    while (running) {
-        int action = handle_all_input();
-        if (action == -1) {
-            running = 0;
-        }
-        else if (action == -2) {
-            scroll_lines(-1);
-            display_from_line(current_line);
-        }
-        else if (action == -3) {
-            scroll_lines(1);
-            display_from_line(current_line);
-        }
-        else if (action >= '0' && action <= '6') {
-            running = 0;
         }
     }
     term_mode(1);
@@ -158,4 +112,4 @@ int main(void) {
 
 #endif
 
-// Compilation: gcc -Wall -Wextra -O2 -std=c99 -DSTANDALONE_BUILD -o module06 module_06.c common.c
+// gcc -Wall -Wextra -O2 -std=c99 -o module06 module_06.c common.c libtermcolor/libtermcolor.c -I libtermcolor

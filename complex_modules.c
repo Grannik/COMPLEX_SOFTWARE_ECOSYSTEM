@@ -4,16 +4,24 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
+
 #include "common.h"
+//#include <libmsgtermcolor.h>
+#include "libtermcolor/libtermcolor.h"
 
 static int check_terminal_size(void) {
     struct winsize w;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
+        libtermcolor_msg(37, "WARNING:", 35, " ioctl failed for terminal size check", NUL);
         return 0;
     }
     if (w.ws_col < 84 || w.ws_row < 21) {
-        printf("\033[1;31m Terminal too small! Minimum: 84x21\033[0m\n");
-        printf("\033[33m Current: %dx%d\033[0m\n", w.ws_col, w.ws_row);
+        libtermcolor_buf(84, 21, BUF);
+        libtermcolor_msg(1, " ", 31, "FATAL:", 22, " ",
+                       32, "Terminal too small! Minimum: %dx%d", NUL);
+        libtermcolor_buf(w.ws_col, w.ws_row, BUF);
+        libtermcolor_msg(1, " ", 33, "WARNING:", 22, " ",
+                       35, "Current size: %dx%d", NUL);
         return 0;
     }
     return 1;
@@ -32,16 +40,74 @@ DECLARE_MODULE_RUN(07);
 
 typedef struct {
     int module_id;
-    void (*scroll_up)(void);
-    void (*scroll_down)(void);
+    int current_line;
+    int block_size;
+    int total;
     int (*run)(void);
 } ScrollableModule;
 
 static ScrollableModule scrollable_modules[] = {
-    {0, module_0_scroll_up,   module_0_scroll_down,   module_00_run},
-    {5, module_5_scroll_up,   module_5_scroll_down,   module_05_run},
-    {6, module_6_scroll_up,   module_6_scroll_down,   module_06_run},
+{0, 0, 0, 36,  module_00_run},
+{5, 0, 0, 59,  module_05_run},
+{6, 0, 0, 256, module_06_run},
+{7, 0, 0, 39,  module_07_run},
 };
+
+void universal_scroll(int module_id, int direction) {
+    for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
+        if (scrollable_modules[i].module_id == module_id) {
+            common_scroll(direction, &scrollable_modules[i].current_line, scrollable_modules[i].block_size, scrollable_modules[i].total);
+            break;
+        }
+    }
+}
+
+int universal_get_current_line(int module_id) {
+    for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
+        if (scrollable_modules[i].module_id == module_id) {
+            return scrollable_modules[i].current_line;
+        }
+    }
+    return 0;
+}
+
+void universal_set_current_line(int module_id, int line) {
+    for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
+        if (scrollable_modules[i].module_id == module_id) {
+            if (line < 0) line = 0;
+            if (line > scrollable_modules[i].total - scrollable_modules[i].block_size) line = scrollable_modules[i].total - scrollable_modules[i].block_size;
+            scrollable_modules[i].current_line = line;
+            break;
+        }
+    }
+}
+
+int universal_get_block_size(int module_id) {
+    for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
+        if (scrollable_modules[i].module_id == module_id) {
+            return scrollable_modules[i].block_size;
+        }
+    }
+    return 0;
+}
+
+void universal_set_block_size(int module_id, int size) {
+    for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
+        if (scrollable_modules[i].module_id == module_id) {
+            scrollable_modules[i].block_size = size;
+            break;
+        }
+    }
+}
+
+int universal_get_total(int module_id) {
+    for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
+        if (scrollable_modules[i].module_id == module_id) {
+            return scrollable_modules[i].total;
+        }
+    }
+    return 0;
+}
 
 static int is_animated_module(int module_num) {
     if (module_num == 1) {
@@ -54,9 +120,6 @@ static int is_animated_module(int module_num) {
         return 1;
     }
     if (module_num == 4) {
-        return 1;
-    }
-    if (module_num == 7) {
         return 1;
     }
     return 0;
@@ -95,11 +158,11 @@ static int handle_static_input(int *current_module) {
                         for (size_t i = 0; i < sizeof(scrollable_modules) / sizeof(scrollable_modules[0]); i++) {
                             if (*current_module == scrollable_modules[i].module_id) {
                                 if (seq[1] == 'A') {
-                                    scrollable_modules[i].scroll_up();
-                                    scrollable_modules[i].run();
+                                   universal_scroll(*current_module, -1);
+                                   scrollable_modules[i].run();
                                 } else if (seq[1] == 'B') {
-                                    scrollable_modules[i].scroll_down();
-                                    scrollable_modules[i].run();
+                                   universal_scroll(*current_module, 1);
+                                   scrollable_modules[i].run();
                                 }
                                 break;
                             }
@@ -162,5 +225,7 @@ int main(void) {
     }
     term_mode(1);
     screen_state(1);
+    setbuf(stdout, NULL);
+    libtermcolor_msg(37," END", NUL);
     return 0;
 }

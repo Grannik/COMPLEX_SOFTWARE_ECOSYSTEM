@@ -1,105 +1,128 @@
 #include "common.h"
+#include "content_var.h"
+
 #include <time.h>
 #include <string.h>
 #include <unistd.h>
-#include <time.h>
-#include <unistd.h>
-
-void set_terminal_mode(int enable) {
-    static struct termios oldt, newt;
-    if (enable) {
-        tcgetattr(STDIN_FILENO, &oldt);
-        newt = oldt;
-        newt.c_lflag &= ~(ICANON | ECHO);
-        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    } else {
-        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    }
-}
-
-int kbhit() {
-    struct timeval tv = {0L, 0L};
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(STDIN_FILENO, &fds);
-    return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
-}
+#include <termios.h>
+#include <sys/ioctl.h>
 
 int module_07_run(void) {
-    static const char *phrases[] = {
-        " Per aspera ad astra Через тернии к звёздам | ",
-        " Veni, vidi, vici Пришёл, увидел, победил | ",
-        " Carpe diem Лови мгновение | ",
-        " Cogito ergo sum Мыслю, следовательно существую | ",
-        " Memento mori Помни о смерти | ",
-        " Alea iacta est Жребий брошен | ",
-        " Dum spiro, spero Пока дышу, надеюсь | ",
-        " Sic transit gloria mundi Так проходит мирская слава | ",
-        " Errare humanum est Человеку свойственно ошибаться | ",
-        " Quod licet Iovi, non licet bovi Что дозволено Юпитеру, не дозволено быку | ",
-        " Tertium non datur Третьего не дано | ",
-        " O tempora, o mores! О времена, о нравы! | ",
-        " Panem et circenses Хлеба и зрелищ | ",
-        NULL
-    };
-    #define DISPLAY_WIDTH 76
-    static char display_buffer[DISPLAY_WIDTH + 1] = {0};
-    static int initialized = 0;
-    static int current_phrase = 0;
-    static int phrase_pos = 0;
-    if (!initialized) {
-        printf("\033[2J\033[H");
-        memset(display_buffer, ' ', DISPLAY_WIDTH);
-        display_buffer[DISPLAY_WIDTH] = '\0';
-        initialized = 1;
-    }
-    if (phrases[current_phrase] && phrases[current_phrase][phrase_pos]) {
-        memmove(display_buffer, display_buffer + 1, DISPLAY_WIDTH - 1);
-        display_buffer[DISPLAY_WIDTH - 1] = phrases[current_phrase][phrase_pos];
-        phrase_pos++;
-    }
-    if (!phrases[current_phrase] || !phrases[current_phrase][phrase_pos]) {
-        current_phrase++;
-        phrase_pos = 0;
-        if (!phrases[current_phrase]) current_phrase = 0;
-        memmove(display_buffer, display_buffer + 1, DISPLAY_WIDTH - 1);
-        display_buffer[DISPLAY_WIDTH - 1] = ' ';
-    }
-    printf("\033[2J\033[H");
+    current_content_size = TOTAL_CONTENT;
+    int term_height = get_terminal_height();
+    int available_lines = term_height - 4;
+    if (available_lines < 1) available_lines = 1;
+    int total = TOTAL_CONTENT;
+    int new_block_size = (available_lines >= total) ? total : available_lines;
+    universal_set_block_size(7, new_block_size);
+    universal_set_current_line(7, universal_get_current_line(7));
+    content_current_line = universal_get_current_line(7);
+    content_block_size = new_block_size;
     draw_exact_frame();
-    print_subtitle_left("____[][][][][][][][\033[0m7\033[32m][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", 2, 2);
-    print_subtitle_left("marquee", 3, 6);
-    printf("\033[5;6H%.*s", DISPLAY_WIDTH, display_buffer);
-    fflush(stdout);
-    usleep(100000);
+    libtermcolor_pos(2, 2, POS, 32,"____[][][][][][][][", 37,"7", 32,"][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", NUL);
+    libtermcolor_pos(6, 3, POS, 32,"C Format Specifiers List", NUL);
+    printf("\n");
+    display_from_line_mode(content_current_line, DISPLAY_FUNCS, (void *)content, TOTAL_CONTENT);
     return 0;
 }
 
 #ifndef COMPLEX_BUILD
-int main() {
-    char text[] = " Per aspera ad astra. ";
-    int len = strlen(text);
-    set_terminal_mode(1);
-    while (1) {
-        if (kbhit()) {
-            char c = getchar();
-            if (c == 'q' || c == 'Q') {
-                break;
-            }
-        }
-        printf("\r%s", text);
-        fflush(stdout);
-        char first = text[0];
-        for (int i = 0; i < len - 1; i++) {
-            text[i] = text[i + 1];
-        }
-        text[len - 1] = first;
-        usleep(100000);
-    }
-    set_terminal_mode(0);
-	printf("\033[2J\033[H");
+#include <sys/ioctl.h>
+
+void universal_set_block_size(int module_id, int size) {
+    (void)module_id; (void)size;
+}
+
+int universal_get_current_line(int module_id) {
+    (void)module_id;
     return 0;
 }
+
+void universal_set_current_line(int module_id, int line) {
+    (void)module_id; (void)line;
+}
+
+extern const char **current_content;
+extern int current_content_size;
+extern int content_block_size;
+extern int content_current_line;
+
+static int local_check_terminal_size(void) {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
+        libtermcolor_msg(37, "WARNING:", 35, " ioctl failed for terminal size check", NUL);
+        return 0;
+    }
+    if (w.ws_col < 84 || w.ws_row < 21) {
+        libtermcolor_buf(84, 21, BUF);
+        libtermcolor_msg(1, " ", 31, "FATAL:", 22, " ",
+                       32, "Terminal too small! Minimum: %dx%d", NUL);
+        libtermcolor_buf(w.ws_col, w.ws_row, BUF);
+        libtermcolor_msg(1, " ", 33, "WARNING:", 22, " ",
+                       35, "Current size: %dx%d", NUL);
+        return 0;
+    }
+    return 1;
+}
+
+int main(void) {
+    if (!local_check_terminal_size()) {
+        return 1;
+    }
+    screen_state(0);
+    term_mode(0);
+    void redraw_full_screen(int current_line) {
+        draw_exact_frame();
+        printf("\033[0m\033[2;2H");
+    libtermcolor_pos(2, 2, POS, 32,"____[][][][][][][][", 37,"7", 32,"][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", NUL);
+    libtermcolor_pos(6, 3, POS, 32,"C Format Specifiers List", NUL);
+        printf("\n");
+        display_from_line_mode(current_line, DISPLAY_FUNCS, (void *)content, TOTAL_CONTENT);
+    }
+    int term_height = get_terminal_height();
+    int available_lines = term_height - 4;
+    if (available_lines < 1) available_lines = 1;
+    current_content_size = TOTAL_CONTENT;
+    if (available_lines >= TOTAL_CONTENT) {
+        content_block_size = TOTAL_CONTENT;
+    } else {
+        content_block_size = available_lines;
+    }
+    content_current_line = 0;
+    redraw_full_screen(content_current_line);
+    while (1) {
+        char ch;
+        ssize_t bytes = read(STDIN_FILENO, &ch, 1);
+        if (bytes == 1) {
+            if (ch == 'q' || ch == 'Q') break;
+            if (ch == 27) {
+                char seq[2];
+                bytes = read(STDIN_FILENO, seq, 2);
+                if (bytes == 2 && seq[0] == '[') {
+                    int old_line = content_current_line;
+                    if (seq[1] == 'A') {
+                        if (content_current_line > 0) {
+                            content_current_line--;
+                        }
+                    } else if (seq[1] == 'B') {
+                        if (content_current_line < TOTAL_CONTENT - content_block_size) {
+                            content_current_line++;
+                        }
+                    }
+                    if (old_line != content_current_line) {
+                        redraw_full_screen(content_current_line);
+                    }
+                }
+            }
+        }
+    }
+
+    term_mode(1);
+    screen_state(1);
+    printf("\033[0m");
+    return 0;
+}
+
 #endif
 
-// Compilation: gcc -Wall -Wextra -O2 -std=c99 -DSTANDALONE_BUILD -o module07 module_07.c common.c
+// gcc -Wall -Wextra -O2 -std=c99 -o module07 module_07.c content_var.c common.c libtermcolor/libtermcolor.c -I libtermcolor

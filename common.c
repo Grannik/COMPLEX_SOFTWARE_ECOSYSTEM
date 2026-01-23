@@ -1,4 +1,8 @@
 #include "common.h"
+//#include <libmsgtermcolor.h>
+#include "libtermcolor/libtermcolor.h"
+#include "content_var.h"
+
 #include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -98,7 +102,7 @@ void draw_exact_frame() {
     int fixed_width = 84;
     int actual_width = (term_width < fixed_width) ? term_width : fixed_width;
     if (actual_width < 4) return;
-    printf("\033[38;5;10m");
+    printf("\033[32m");
     printf("\033[2J\033[H");
     printf("╔");
     for (int i = 1; i < actual_width - 1; i++) {
@@ -131,19 +135,28 @@ int get_terminal_height() {
     return w.ws_row;
 }
 
-void display_from_line(int start_line) {
+void display_from_line_mode(int start_line, display_mode_t mode, void *content_ptr, int content_size) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     int width = (w.ws_col < 84) ? w.ws_col : 84;
     for (int row = 0; row < content_block_size; row++) {
-        printf("\033[%d;2H", 4 + row);
         int line_num = start_line + row;
-        if (current_content && line_num < current_content_size) {
-            printf("\033[K%s", current_content[line_num]);
-        } else {
-            printf("\033[K");
+        if (mode == DISPLAY_LINES) {
+            const char **lines = (const char **)content_ptr;
+            printf("\033[%d;2H", 4 + row);
+            if (lines && line_num < content_size) {
+                printf("\033[K%s", lines[line_num]);
+            } else {
+                printf("\033[K");
+            }
+              printf("\033[32m\033[%d;%dH║\033[0m",4 + row, width);
+        } else if (mode == DISPLAY_FUNCS) {
+            void (**funcs)(void) = (void (**)(void))content_ptr;
+            if (line_num < content_size) {
+                funcs[line_num]();
+            }
+              printf("\033[32m\033[%d;1H║", 4 + row);
         }
-        printf("\033[38;5;10m\033[%d;%dH║\033[0m", 4 + row, width);
     }
     fflush(stdout);
 }
@@ -154,11 +167,6 @@ void common_scroll(int direction, int *current_line, int block_size, int total) 
     if (new_line < 0) new_line = 0;
     if (new_line > total - block_size) new_line = total - block_size;
     *current_line = new_line;
-}
-
-void print_subtitle_left(const char *title, int row, int left_margin) {
-    printf("\033[%d;%dH\033[38;5;10m%s\033[0m", row, left_margin, title);
-    fflush(stdout);
 }
 
 void print_pseudographic_time(int hours, int mins, int secs,
