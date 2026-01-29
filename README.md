@@ -58,11 +58,11 @@ sudo make install
 ###  *** libmsgtermcolor ***
 #Установка статической библиотеки libmsgtermcolor.a:
 
- Копируем заголовочный файл в системные include
-sudo cp libmsgtermcolor.h /usr/local/include/
+ Копируем заголовочный файл в системные include:
+sudo cp libtermcolor.h /usr/local/include/
 
  Копируем библиотеку в системные lib
-sudo cp libmsgtermcolor.a /usr/local/lib/
+sudo cp libtermcolor.a /usr/local/lib/
 
  Обновляем кэш библиотек (для динамических, но хорошая привычка)
 sudo ldconfig
@@ -70,8 +70,8 @@ sudo ldconfig
 2. Проверка установки:
 
 # Проверяем, что файлы на месте
-ls -la /usr/local/include/libmsgtermcolor.h
-ls -la /usr/local/lib/libmsgtermcolor.a
+ls -la /usr/local/include/libtermcolor.h
+ls -la /usr/local/lib/libtermcolor.a
 
 # Проверяем доступность для компилятора
 gcc -lmsgtermcolor --verbose 2>&1 | grep -A5 "library path"
@@ -160,7 +160,8 @@ COMPLEX_SOFTWARE_ECOSYSTEM
 ├── common.h
 ├── complex_modules.c
 ├── content_color_16.h
-├── content_color_256.h
+├── content_color_3_256.h
+├── content_color_4_256.h
 ├── content_help.h
 ├── content_var.c
 ├── content_var.h
@@ -177,6 +178,7 @@ COMPLEX_SOFTWARE_ECOSYSTEM
 ├── module_05.c
 ├── module_06.c
 ├── module_07.c
+├── module_08.c
 ├── pseudographic_font_3.h
 ├── pseudographic_font_5.h
 └── pseudographic_font_7.h
