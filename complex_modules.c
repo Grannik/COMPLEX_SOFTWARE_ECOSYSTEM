@@ -37,6 +37,7 @@ DECLARE_MODULE_RUN(04);
 DECLARE_MODULE_RUN(05);
 DECLARE_MODULE_RUN(06);
 DECLARE_MODULE_RUN(07);
+DECLARE_MODULE_RUN(08);
 
 typedef struct {
     int module_id;
@@ -50,7 +51,8 @@ static ScrollableModule scrollable_modules[] = {
 {0, 0, 0, 36,  module_00_run},
 {5, 0, 0, 59,  module_05_run},
 {6, 0, 0, 256, module_06_run},
-{7, 0, 0, 39,  module_07_run},
+{7, 0, 0, 256, module_07_run},
+{8, 0, 0, 39,  module_08_run},
 };
 
 void universal_scroll(int module_id, int direction) {
@@ -125,25 +127,32 @@ static int is_animated_module(int module_num) {
     return 0;
 }
 
-    int (*module_runs[8])(void) = {
-        module_00_run, module_01_run, module_02_run, module_03_run, module_04_run, module_05_run,
-        module_06_run, module_07_run
-    };
+int (*module_runs[9])(void) =
+{module_00_run, module_01_run, module_02_run, module_03_run, module_04_run, module_05_run, module_06_run, module_07_run, module_08_run};
+
+static int handle_common_input(char ch, int *current_module) {
+    if (ch == 'Q') {
+        return -1;
+    }
+    else if ((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z')) {
+        if (ch >= '0' && ch <= '9') {
+            *current_module = ch - '0';
+        } else {
+            *current_module = 10 + (ch - 'a');
+        }
+        screen_state(0);
+        return 1;
+    }
+    return 0;
+}
 
 static int handle_static_input(int *current_module) {
     char ch;
     ssize_t bytes = read(STDIN_FILENO, &ch, 1);
     if (bytes != 1) return 0;
-
-    if (ch == 'q' || ch == 'Q') {
-        return -1;
-    }
-    else if (ch >= '0' && ch <= '7') {
-        *current_module = ch - '0';
-        screen_state(0);
-        return 1;
-    }
-    else if (ch == 27) {
+    int result = handle_common_input(ch, current_module);
+    if (result != 0) return result;
+    if (ch == 27) {
         char seq[2];
         struct timeval tv = {0, 10000};
         fd_set fds;
@@ -171,7 +180,6 @@ static int handle_static_input(int *current_module) {
                 }
             }
         }
-        return 0;
     }
     return 0;
 }
@@ -185,14 +193,7 @@ static int handle_animated_input(int *current_module) {
         char ch;
         ssize_t bytes = read(STDIN_FILENO, &ch, 1);
         if (bytes == 1) {
-            if (ch == 'q' || ch == 'Q') {
-                return -1;
-            }
-            else if (ch >= '0' && ch <= '7') {
-                *current_module = ch - '0';
-                screen_state(0);
-                return 1;
-            }
+            return handle_common_input(ch, current_module);
         }
     }
     return 0;
@@ -201,6 +202,42 @@ static int handle_animated_input(int *current_module) {
 static int handle_static_input(int *current_module);
 static int handle_animated_input(int *current_module);
 
+static int run_main_loop(int start_module) {
+    int current_module = start_module;
+    while (1) {
+        if (current_module >= 0 && current_module <= 8) {
+            if (module_runs[current_module] != NULL) {
+                module_runs[current_module]();
+                int result;
+                if (is_animated_module(current_module)) {
+                    result = handle_animated_input(&current_module);
+                } else {
+                    result = handle_static_input(&current_module);
+                }
+                if (result == -1) break;
+            } else {
+                printf("\033[91m Module:\033[0m %d\033[31m empty\033[0m\n", current_module);
+                int result = handle_static_input(&current_module);
+                if (result == -1) break;
+            }
+        } else if (current_module >= 8 && current_module <= 35) {
+            printf("\033[91m Module:\033[0m ");
+            if (current_module <= 9) {
+                printf("%d", current_module);
+            } else {
+                printf("%c", 'a' + (current_module - 10));
+            }
+            printf("\033[31m empty\033[0m\n");
+            int result = handle_static_input(&current_module);
+            if (result == -1) break;
+        } else {
+            printf("\033[91mInvalid module:\033[0m %d\n", current_module);
+            current_module = 0;
+        }
+    }
+    return 0;
+}
+
 int main(void) {
     if (!check_terminal_size()) {
         return 1;
@@ -208,21 +245,7 @@ int main(void) {
     int current_module = 0;
     screen_state(0);
     term_mode(0);
-    while (1) {
-        if (module_runs[current_module] != NULL) {
-            module_runs[current_module]();
-            int result;
-            if (is_animated_module(current_module)) {
-                result = handle_animated_input(&current_module);
-            } else {
-                result = handle_static_input(&current_module);
-            }
-            if (result == -1) break;
-        } else {
-            printf("\033[1;31mModule %d not available\033[0m\n", current_module);
-            break;
-        }
-    }
+    run_main_loop(current_module);
     term_mode(1);
     screen_state(1);
     setbuf(stdout, NULL);

@@ -1,5 +1,5 @@
 #include "common.h"
-#include "content_var.h"
+#include "content_color_4_256.h"
 
 #include <time.h>
 #include <string.h>
@@ -20,13 +20,13 @@ int module_07_run(void) {
     content_block_size = new_block_size;
     draw_exact_frame();
     libtermcolor_pos(2, 2, POS, 32,"____[][][][][][][][", 37,"7", 32,"][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", NUL);
-    libtermcolor_pos(6, 3, POS, 32,"C Format Specifiers List", NUL);
-    printf("\n");
-    display_from_line_mode(content_current_line, DISPLAY_FUNCS, (void *)content, TOTAL_CONTENT);
+    libtermcolor_pos(6, 3, POS, 32,"256-Color ANSI Palette List \\033[48;5;*m", NUL);
+    display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
     return 0;
 }
 
 #ifndef COMPLEX_BUILD
+
 #include <sys/ioctl.h>
 
 void universal_set_block_size(int module_id, int size) {
@@ -42,12 +42,7 @@ void universal_set_current_line(int module_id, int line) {
     (void)module_id; (void)line;
 }
 
-extern const char **current_content;
-extern int current_content_size;
-extern int content_block_size;
-extern int content_current_line;
-
-static int local_check_terminal_size(void) {
+static int check_terminal_size(void) {
     struct winsize w;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
         libtermcolor_msg(37, "WARNING:", 35, " ioctl failed for terminal size check", NUL);
@@ -66,30 +61,26 @@ static int local_check_terminal_size(void) {
 }
 
 int main(void) {
-    if (!local_check_terminal_size()) {
+    if (!check_terminal_size()) {
         return 1;
     }
     screen_state(0);
     term_mode(0);
-    void redraw_full_screen(int current_line) {
-        draw_exact_frame();
-        printf("\033[0m\033[2;2H");
-    libtermcolor_pos(2, 2, POS, 32,"____[][][][][][][][", 37,"7", 32,"][][][][][][][][][][][][][][][][][][][][][][][][][][][][]_____", NUL);
-    libtermcolor_pos(6, 3, POS, 32,"C Format Specifiers List", NUL);
-        printf("\n");
-        display_from_line_mode(current_line, DISPLAY_FUNCS, (void *)content, TOTAL_CONTENT);
-    }
+    printf("\033[2J\033[H");
+    draw_exact_frame();
+    libtermcolor_pos(6, 2, POS, 32,"256-Color ANSI Palette List \033[48;5;*m", NUL);
+    current_content = content;
+    current_content_size = TOTAL_CONTENT;
     int term_height = get_terminal_height();
     int available_lines = term_height - 4;
     if (available_lines < 1) available_lines = 1;
-    current_content_size = TOTAL_CONTENT;
     if (available_lines >= TOTAL_CONTENT) {
         content_block_size = TOTAL_CONTENT;
     } else {
         content_block_size = available_lines;
     }
     content_current_line = 0;
-    redraw_full_screen(content_current_line);
+    display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
     while (1) {
         char ch;
         ssize_t bytes = read(STDIN_FILENO, &ch, 1);
@@ -99,30 +90,26 @@ int main(void) {
                 char seq[2];
                 bytes = read(STDIN_FILENO, seq, 2);
                 if (bytes == 2 && seq[0] == '[') {
-                    int old_line = content_current_line;
                     if (seq[1] == 'A') {
                         if (content_current_line > 0) {
                             content_current_line--;
+                            display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
                         }
                     } else if (seq[1] == 'B') {
                         if (content_current_line < TOTAL_CONTENT - content_block_size) {
                             content_current_line++;
+                            display_from_line_mode(content_current_line, DISPLAY_LINES, (void *)content, TOTAL_CONTENT);
                         }
-                    }
-                    if (old_line != content_current_line) {
-                        redraw_full_screen(content_current_line);
                     }
                 }
             }
         }
     }
-
     term_mode(1);
     screen_state(1);
-    printf("\033[0m");
     return 0;
 }
 
 #endif
 
-// gcc -Wall -Wextra -O2 -std=c99 -o module07 module_07.c content_var.c common.c libtermcolor/libtermcolor.c -I libtermcolor
+// gcc -Wall -Wextra -O2 -std=c99 -o module06 module_06.c common.c libtermcolor/libtermcolor.c -I libtermcolor
