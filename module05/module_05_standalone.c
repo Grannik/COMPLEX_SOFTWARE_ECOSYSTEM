@@ -4,10 +4,7 @@
 #include "libtermcolor/libtermcolor.h"
 #include "libtermanimation/libtermanimation.h"
 
-int handle_common_input(char input_char, int *current_module);
-int module_05_run(void);
 int module_05_loop(void);
-
 int module_05_loop(void)
 {
     while (1) {
@@ -23,15 +20,10 @@ int module_05_loop(void)
             min_x,   cd.min_str,
             -1);
         int ch = getch();
-        flushinp();
         if (ch != ERR) {
-            int new_module = 5;
-            int result = handle_common_input((char)ch, &new_module);
-            if (result == -1) {
+            if (ch == 'q') {
+                terminal_control(0);
                 return -1;
-            }
-            if (new_module != 5) {
-                return new_module;
             }
         }
         sleep(1);
@@ -39,15 +31,13 @@ int module_05_loop(void)
     return 5;
 }
 
-int module_05_run(void) {
+int main(void) {
+    terminal_control(1);
     nodelay(stdscr, TRUE);
     werase(stdscr);
-    generic_frame_ncurses(stdscr, 1, 1, 84, termheight, 0, 2, -1, -1, 1, 0, 4, "GRANNIK | COMPLEX SOFTWARE ECOSYSTEM");
-    module_strip_ncurses(stdscr, 2, 2, 0, 2, -1, 7, '5', "Clock (9-line pseudographic font)");
 int maxy, maxx;
-getmaxyx(stdscr, maxy, maxx);
-
-generic_abc_9_ncurses(
+    getmaxyx(stdscr, maxy, maxx);
+    generic_abc_9_ncurses(
     stdscr,
     (maxx / 2) - 4,
     (maxy / 2) - 4,
@@ -56,3 +46,5 @@ generic_abc_9_ncurses(
 );
     return module_05_loop();
 }
+
+// clear;gcc module_05_standalone.c ../common.c ../libtermcolor/libtermcolor.c ../libtermcolor/tc_frame.c ../libtermcolor/pseudographic.c ../libtermcolor/tc_file_directories_color.c ../libtermanimation/libtermanimation.c ../content_var/content_var.c ../libtermcontrol/libtermcontrol.c -o module_clock_9 -I../ -I../libtermcolor -I../libtermanimation -I../content_var -I../libtermcontrol -lncursesw
