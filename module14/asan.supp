@@ -1,0 +1,5 @@
+# ALSA leaks suppression for terminal_navigator_pcm
+leak:libasound.so.2
+leak:libasound
+leak:snd*
+leak:snd_pcm_open
